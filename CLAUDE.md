@@ -89,11 +89,31 @@ setlists (셋리스트/콘티)
 | #180 | 콘티 곡 추가 모달: 같은 곡 악보 여러 개 넘겨보기 + 악보 수정/삭제 (미리보기·인라인 수정은 구현됨, 삭제 기능만 남음) |
 
 ### 배포 정보
-- 백엔드: https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)
+- 백엔드(기존): https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)
+- 백엔드(신규, 이관 중): OCI VM(`168.110.106.156`, `ubuntu` 계정) — 아래 "OCI 백엔드 이관" 참고. Fly.io는 OCI 전환 검증 끝날 때까지 병행 유지, 아직 폐기 안 함.
 - 프론트엔드: https://worship-sheet.vercel.app (Vercel, Git 연동으로 `main` push 시 자동배포, Root Directory: `frontend`)
-- DB: Supabase
+- DB: Supabase (OCI 이관 후에도 그대로 유지)
 - OCR 자동 추출 기능은 사용 빈도 대비 Fly.io 상시 가동 비용(24시간 4GB/2CPU) 부담이 커서 #142로 완전히 제거함 (`ocr-service` 앱도 폐기 대상 — Fly.io 대시보드에서 별도로 앱 삭제 필요).
 - ⚠️ 사용자 인증(#77) 배포 후 Fly.io 백엔드에 `JWT_SECRET` 환경변수(32바이트 이상 랜덤 문자열)를 반드시 설정할 것. 미설정 시 기본값(dev-only)이 사용되어 보안상 위험함
+
+### OCI 백엔드 이관
+- Fly.io 비용 절감을 위해 백엔드를 OCI VM으로 이관 중(DB는 Supabase 그대로 유지, R2 스토리지도 그대로 유지).
+- 이 세션(원격 격리 컨테이너)은 네트워크 정책상 SSH(raw TCP)를 못 나가서 서버에 직접 접속할 수 없음 — 배포는 전부 GitHub Actions(`OCI Deploy` 워크플로우, `.github/workflows/oci-deploy.yml`)가 SSH로 대신 수행하고, 최초 1회 서버 설정만 사람이 직접 함.
+- **배포 방식**: `docker-compose.oci.yml`(백엔드 컨테이너 + `cloudflared` Quick Tunnel)을 `main` push마다 GitHub Actions가 SSH로 접속해 `git reset --hard origin/main` 후 `docker compose up -d --build`.
+- **HTTPS 노출**: 도메인이 없어서 Cloudflare **Quick Tunnel**(`cloudflared tunnel --url ...`, 토큰/로그인 불필요) 사용을 사용자가 선택함. ⚠️ **Quick Tunnel 주소(`https://xxxx.trycloudflare.com`)는 배포(컨테이너 재시작)마다 바뀜** — 자동배포와는 궁합이 나쁘다는 점을 사용자에게 명시적으로 안내했고, 그래도 도메인 없이 진행하기로 확정함. 배포 후 Vercel의 `VITE_API_BASE_URL`을 새 주소로 **수동 갱신**해야 함(OCI Deploy 워크플로우 로그 마지막 줄에 새 주소가 출력됨).
+  - 나중에 저렴한 도메인을 하나 사서 Cloudflare Named Tunnel로 바꾸면 주소가 고정되어 이 수동 갱신이 필요 없어짐(사용자에게 추천했으나 일단 보류).
+- **필요한 GitHub 저장소 시크릿**(Settings → Secrets and variables → Actions): `OCI_HOST`(=`168.110.106.156`), `OCI_USER`(=`ubuntu`), `OCI_SSH_PRIVATE_KEY`(SSH 개인키 전체 내용). 세션은 이 값을 직접 다루지 않음 — 사용자가 GitHub UI로 직접 등록.
+- **서버 최초 1회 수동 설정**(사람이 직접 SSH로 실행):
+  ```bash
+  curl -fsSL https://get.docker.com | sudo sh
+  sudo usermod -aG docker $USER && newgrp docker
+  git clone https://github.com/jeybell/sheet-music.git ~/sheet-music
+  cd ~/sheet-music
+  # .env.oci 에 Supabase(SPRING_DATASOURCE_*)·R2·JWT_SECRET·CORS_ALLOWED_ORIGINS 채워 넣기(.env.example 참고)
+  docker compose --env-file .env.oci -f docker-compose.oci.yml up -d --build
+  docker logs sheet-music-tunnel-oci   # 여기서 최초 Quick Tunnel 주소 확인
+  ```
+- 이후로는 `main` push → GitHub Actions가 알아서 재배포. 사람이 할 일은 배포 후 로그에서 새 Quick Tunnel 주소를 확인해 Vercel 환경변수만 갱신하는 것.
 
 ## 다음 세션 시작 가이드
 - 새 세션 시작 시 **가장 먼저** `git pull origin main`으로 최신 코드를 받을 것.

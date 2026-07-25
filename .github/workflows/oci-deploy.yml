@@ -1,0 +1,28 @@
+name: OCI Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend to OCI
+    runs-on: ubuntu-latest
+    concurrency: deploy-group-oci
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ~/sheet-music
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose --env-file .env.oci -f docker-compose.oci.yml up -d --build
+            sleep 8
+            echo "=== 새 Cloudflare Tunnel 주소 (Vercel VITE_API_BASE_URL에 반영할 것) ==="
+            docker logs sheet-music-tunnel-oci 2>&1 | grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' | tail -1
