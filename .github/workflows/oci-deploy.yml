@@ -11,6 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: deploy-group-oci
     steps:
+      # TEMP: 개인키 분실 복구용으로 새 공개키를 서버에 등록. 등록 확인되면 이 스텝은 제거할 것.
+      - name: TEMP - register recovery public key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJxnkOvaovk8kKxUi6eDVM1vBxkXf45ocdlVysdkbr4C bardo@pjh"
+            mkdir -p ~/.ssh
+            grep -qxF "$PUBKEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$PUBKEY" >> ~/.ssh/authorized_keys
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
