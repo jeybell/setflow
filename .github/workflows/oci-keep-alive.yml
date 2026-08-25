@@ -1,0 +1,35 @@
+name: OCI Keep Alive
+
+# 오래 접속이 없으면 두 가지가 죽는 문제가 있어서, 매일 실제 로그인 요청을 날려 방지한다.
+# 1) Supabase 무료 플랜 DB가 비활성 상태로 일정 기간 지나면 자동 일시정지(Pause)됨
+# 2) Cloudflare Quick Tunnel이 컨테이너는 살아있어도 엣지 연결만 조용히 끊길 수 있음
+#    (트래픽이 있으면 끊길 가능성이 줄어들고, 그래도 끊겨 있으면 아래에서 자동 재시작한다)
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    name: Ping OCI backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping via SSH-discovered tunnel URL
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            URL=$(docker logs sheet-music-tunnel-oci 2>&1 | grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' | tail -1)
+            echo "tunnel url: $URL"
+            if [ -z "$URL" ] || ! curl -sf -X POST "$URL/api/auth/guest" -o /dev/null; then
+              echo "ping failed, restarting tunnel"
+              docker restart sheet-music-tunnel-oci
+              sleep 8
+              echo "=== 새 Cloudflare Tunnel 주소 (Vercel VITE_API_BASE_URL에 반영할 것) ==="
+              docker logs sheet-music-tunnel-oci 2>&1 | grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' | tail -1
+            else
+              echo "ping ok"
+            fi

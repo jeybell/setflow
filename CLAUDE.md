@@ -123,6 +123,7 @@ setlists (셋리스트/콘티)
   docker logs sheet-music-tunnel-oci   # 여기서 최초 Quick Tunnel 주소 확인
   ```
 - 이후로는 `main` push → GitHub Actions가 알아서 재배포. 사람이 할 일은 배포 후 로그에서 새 Quick Tunnel 주소를 확인해 Vercel 환경변수만 갱신하는 것.
+- **자동 생존 확인**(`OCI Keep Alive` 워크플로우, `.github/workflows/oci-keep-alive.yml`): 매일 1회 SSH로 접속해 현재 Quick Tunnel 주소로 실제 게스트 로그인 요청을 보내 Supabase 자동 일시정지·터널 idle 끊김을 예방한다. 실패하면 터널 컨테이너를 자동 재시작하고 새 주소를 로그에 남기는데, 이 경우엔 Vercel `VITE_API_BASE_URL`을 여전히 수동으로 갱신해야 함(Actions 탭에서 워크플로우 실행 로그 확인).
 
 ## 다음 세션 시작 가이드
 - 새 세션 시작 시 **가장 먼저** `git pull origin main`으로 최신 코드를 받을 것.
