@@ -123,6 +123,9 @@ setlists (셋리스트/콘티)
   docker logs sheet-music-tunnel-oci   # 여기서 최초 Quick Tunnel 주소 확인
   ```
 - 이후로는 `main` push → GitHub Actions가 알아서 재배포. 사람이 할 일은 배포 후 로그에서 새 Quick Tunnel 주소를 확인해 Vercel 환경변수만 갱신하는 것.
+- **⚠️ 오래(수일~수주) 접속 없다가 다시 쓰려고 하면 게스트 로그인이 로딩 후 로그인 화면으로 튕기는 문제가 재발할 수 있음.** 원인은 보통 아래 둘 중 하나(둘 다 확인할 것):
+  1. **Cloudflare Quick Tunnel 연결이 idle 중 조용히 끊김** — 컨테이너(`sheet-music-tunnel-oci`)는 `docker ps`상 계속 Running으로 보여도 실제 엣지 연결은 끊겨 있을 수 있음(Docker는 프로세스 생존만 체크, 터널 연결 상태는 체크 안 함). `docker restart sheet-music-tunnel-oci` 후 `docker logs sheet-music-tunnel-oci 2>&1 | grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' | tail -1`로 새 주소 확인 → Vercel `VITE_API_BASE_URL` 갱신 후 재배포.
+  2. **Supabase 무료 플랜 DB가 자동 일시정지(Pause)됨** — 백엔드 로그(`docker logs sheet-music-backend-oci`)에 `FATAL: (ENOTFOUND) tenant/user ... not found` 같은 PostgreSQL 연결 에러가 찍힘. [Supabase 대시보드](https://supabase.com/dashboard)에서 프로젝트가 Paused 상태인지 확인 후 Restore/Resume.
 
 ## 다음 세션 시작 가이드
 - 새 세션 시작 시 **가장 먼저** `git pull origin main`으로 최신 코드를 받을 것.
