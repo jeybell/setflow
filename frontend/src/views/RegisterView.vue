@@ -14,7 +14,7 @@ interface ApiErrorResponse { message?: string }
 const router = useRouter()
 const authStore = useAuthStore()
 
-const form = reactive({ username: '', password: '', passwordConfirm: '' })
+const form = reactive({ username: '', password: '', passwordConfirm: '', inviteCode: '' })
 const errorMessage = ref('')
 const isSubmitting = ref(false)
 
@@ -29,7 +29,7 @@ const handleSubmit = async () => {
   }
   isSubmitting.value = true
   try {
-    await authStore.register(form.username, form.password)
+    await authStore.register(form.username, form.password, form.inviteCode)
     await router.push('/')
   } catch (e) {
     errorMessage.value = apiError(e, '회원가입에 실패했습니다.')
@@ -63,6 +63,11 @@ const handleSubmit = async () => {
         <div class="flex flex-col gap-1.5">
           <Label for="register-password-confirm">비밀번호 확인</Label>
           <Input id="register-password-confirm" v-model="form.passwordConfirm" type="password" autocomplete="new-password" minlength="8" required />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="register-invite-code">초대코드</Label>
+          <Input id="register-invite-code" v-model="form.inviteCode" type="text" autocomplete="off" required />
+          <p class="text-xs text-muted-foreground">가입에는 관리자에게 받은 초대코드가 필요합니다.</p>
         </div>
         <Button type="submit" class="mt-2 w-full" :disabled="isSubmitting">
           {{ isSubmitting ? '가입 중...' : '회원가입' }}

@@ -6,8 +6,8 @@ export interface AuthResponse {
   role: string;
 }
 
-export const register = async (username: string, password: string) => {
-  const { data } = await http.post<AuthResponse>("/api/auth/register", { username, password });
+export const register = async (username: string, password: string, inviteCode: string) => {
+  const { data } = await http.post<AuthResponse>("/api/auth/register", { username, password, inviteCode });
   return data;
 };
 

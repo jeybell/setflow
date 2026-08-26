@@ -55,6 +55,12 @@ server:
 jwt:
   secret: ${JWT_SECRET:dev-only-jwt-secret-please-override-in-production-min-32-bytes}
 
+registration:
+  # 회원가입 초대코드. 미설정(blank)이면 가입이 완전히 비활성화된다(fail-closed).
+  # 로컬/운영 모두 REGISTRATION_INVITE_CODE 환경변수로 지정해야 가입이 열린다.
+  # (기본값을 코드에 박아두면 그 값이 공개 초대코드가 되어버리므로 일부러 비워둔다.)
+  invite-code: ${REGISTRATION_INVITE_CODE:}
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 

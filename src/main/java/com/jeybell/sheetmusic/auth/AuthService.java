@@ -5,6 +5,8 @@ import com.jeybell.sheetmusic.auth.dto.LoginRequest;
 import com.jeybell.sheetmusic.auth.dto.RegisterRequest;
 import com.jeybell.sheetmusic.global.exception.DuplicateUsernameException;
 import com.jeybell.sheetmusic.global.exception.InvalidCredentialsException;
+import com.jeybell.sheetmusic.global.exception.InvalidInviteCodeException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,14 +20,22 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final String inviteCode;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            @Value("${registration.invite-code:}") String inviteCode
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.inviteCode = inviteCode;
     }
 
     public AuthResponse register(RegisterRequest request) {
+        verifyInviteCode(request.inviteCode());
         if (userRepository.existsByUsername(request.username())) {
             throw new DuplicateUsernameException(request.username());
         }
@@ -38,6 +48,19 @@ public class AuthService {
             throw new DuplicateUsernameException(request.username());
         }
         return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername(), user.getRole().name());
+    }
+
+    /**
+     * 초대코드 검증. 서버에 초대코드가 설정되어 있지 않으면(blank) 가입을 완전히 막는다(fail-closed).
+     * 설정되어 있으면 입력값과 정확히 일치해야만 통과한다.
+     */
+    private void verifyInviteCode(String provided) {
+        if (inviteCode == null || inviteCode.isBlank()) {
+            throw new InvalidInviteCodeException("현재 회원가입이 비활성화되어 있습니다. 관리자에게 문의해 주세요.");
+        }
+        if (provided == null || !inviteCode.equals(provided.trim())) {
+            throw new InvalidInviteCodeException("초대코드가 올바르지 않습니다.");
+        }
     }
 
     @Transactional(readOnly = true)

@@ -24,8 +24,8 @@ export const useAuthStore = defineStore('auth', () => {
     setSession(res.token, res.username, res.role)
   }
 
-  const register = async (registerUsername: string, password: string) => {
-    const res = await registerApi(registerUsername, password)
+  const register = async (registerUsername: string, password: string, inviteCode: string) => {
+    const res = await registerApi(registerUsername, password, inviteCode)
     setSession(res.token, res.username, res.role)
   }
 
