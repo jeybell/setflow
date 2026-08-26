@@ -18,7 +18,7 @@
 - 백엔드: Java 17 + Spring Boot 3.x + Gradle, Flyway 마이그레이션
 - 프론트엔드: Vue 3 + TypeScript + Vite + Tailwind v4 (shadcn-vue 스타일)
 - DB: PostgreSQL / 스토리지: Cloudflare R2 (STORAGE_TYPE=local|r2 전환 가능하게)
-- 배포: 백엔드 Fly.io(GitHub Actions), 프론트 Vercel(Git 연동), DB Supabase
+- 배포: 백엔드는 고정 주소가 보장되는 방식으로(PaaS 또는 자체 VM+Named Tunnel/도메인), 프론트 Vercel(Git 연동), DB Supabase
 
 ## 도메인 모델
 songs(곡) → song_sheets(악보 버전, 키별, sort_no로 순서) → song_files(파일)
@@ -75,7 +75,8 @@ setlists(콘티) → setlist_items(곡 순서 + 어떤 악보 버전을 쓸지 +
 - 파일 삭제/교체 전 **콘티(setlist_items) 참조부터 확인**. 겉보기 정상 세트가 아니라
   콘티가 실제 참조하는 세트를 고쳐야 화면이 바뀐다.
 - Cloudflare Quick Tunnel URL은 컨테이너 재시작마다 바뀐다 → 프론트가 죽은 백엔드를
-  가리키는 반복 장애의 원인. 고정 주소(Fly.io 등)로 두는 게 근본 해결.
+  가리키는 반복 장애의 원인. 자체 VM에 배포한다면 최소한 Named Tunnel(고정 주소)을
+  쓸 것 — Quick Tunnel은 절대 프로덕션에 쓰지 말 것.
 - 대량 프로덕션 덮어쓰기는 **드라이런 → 1건 테스트 → 전량**, 재실행 가능(idempotent)하게.
 - dev 서버(Vite HMR)는 특정 요소만 stale 렌더로 남길 수 있다 → "버그처럼 보이는 것"은
   동일 조건 대조 테스트로 오탐을 거를 것. 프로덕션 빌드가 진짜 기준.

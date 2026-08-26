@@ -24,7 +24,7 @@
 - **백엔드**: Java, Spring Boot, Gradle
 - **프론트엔드**: Vue 3, TypeScript
 - **DB**: PostgreSQL
-- **인프라**: Docker Compose / Fly.io (백엔드) + Vercel (프론트엔드)
+- **인프라**: Docker Compose / OCI VM (백엔드) + Vercel (프론트엔드)
 - **스토리지**: Cloudflare R2 (파일 업로드)
 
 ## 도메인 구조
@@ -64,7 +64,7 @@ setlists (셋리스트/콘티)
 - **사용자 인증**: Spring Security + JWT 자체 구현(`/api/auth/register`, `/api/auth/login`), 30일 만료 토큰. `/api/auth/**`, `GET /api/setlists/share/**`, `GET /api/song-files/*/view`·`/download`만 공개, 나머지 API는 인증 필요. 프론트엔드는 `authStore`(Pinia) + axios 인터셉터로 토큰 첨부, 라우터 가드로 미인증 시 `/login` 리다이렉트, 401 응답 시 자동 로그아웃
 - **관리자 모드**(#156): `users.role`(USER/ADMIN) 역할 기반 권한. JWT 필터가 매 요청 시 DB에서 role 조회해 `ROLE_ADMIN`/`ROLE_USER` authority 주입(지정/해제 즉시 반영, 게스트는 관리자 불가). `/api/admin/**` → `hasRole('ADMIN')`. 관리 기능: 사용자 관리(목록/권한 지정·해제/삭제, 본인 대상 작업 차단), 콘텐츠 휴지통(삭제된 곡·콘티 조회·복구), 기능요청 상태변경·삭제. 프론트: `authStore.isAdmin`, `/admin` 라우트 가드 + 관리자에게만 보이는 진입 메뉴. 초기 관리자 시드: `jeybell`
 - **UI**: shadcn-vue 스타일 + Tailwind v4 + 다크/라이트 테마 + 반응형, 악보 이미지 슬라이드 뷰어
-- **인프라**: CI/CD 자동배포(GitHub Actions → Fly.io, Vercel Git 연동), Cloudflare R2 연동(STORAGE_TYPE 전환, 현재 local 모드)
+- **인프라**: CI/CD 자동배포(GitHub Actions → OCI SSH 배포, Vercel Git 연동), Cloudflare R2 연동(STORAGE_TYPE 전환, 현재 local 모드)
 
 ## DB 마이그레이션 현황
 | 버전 | 내용 |
@@ -98,15 +98,15 @@ setlists (셋리스트/콘티)
 | #180 | 콘티 곡 추가 모달: 같은 곡 악보 여러 개 넘겨보기 + 악보 수정/삭제 (미리보기·인라인 수정은 구현됨, 삭제 기능만 남음) |
 
 ### 배포 정보
-- 백엔드(기존): https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)
-- 백엔드(신규, 이관 중): OCI VM(`168.110.106.156`, `ubuntu` 계정) — 아래 "OCI 백엔드 이관" 참고. Fly.io는 OCI 전환 검증 끝날 때까지 병행 유지, 아직 폐기 안 함.
+- 백엔드: OCI VM(`168.110.106.156`, `ubuntu` 계정) — 아래 "OCI 백엔드 운영" 참고.
 - 프론트엔드: https://worship-sheet.vercel.app (Vercel, Git 연동으로 `main` push 시 자동배포, Root Directory: `frontend`)
-- DB: Supabase (OCI 이관 후에도 그대로 유지)
-- OCR 자동 추출 기능은 사용 빈도 대비 Fly.io 상시 가동 비용(24시간 4GB/2CPU) 부담이 커서 #142로 완전히 제거함 (`ocr-service` 앱도 폐기 대상 — Fly.io 대시보드에서 별도로 앱 삭제 필요).
-- ⚠️ 사용자 인증(#77) 배포 후 Fly.io 백엔드에 `JWT_SECRET` 환경변수(32바이트 이상 랜덤 문자열)를 반드시 설정할 것. 미설정 시 기본값(dev-only)이 사용되어 보안상 위험함
+- DB: Supabase
+- OCR 자동 추출 기능은 사용 빈도 대비 상시 가동 비용 부담이 커서 #142로 완전히 제거함.
+- ⚠️ 사용자 인증(#77) 관련 `JWT_SECRET`은 서버의 `.env.oci`에 설정(32바이트 이상 랜덤 문자열). 미설정 시 기본값(dev-only)이 사용되어 보안상 위험함
+- **Fly.io는 OCI 이관 검증 완료 후 폐기함**(`fly.toml`, `.github/workflows/fly-deploy.yml` 저장소에서 제거). Fly.io 대시보드에서 앱 자체(`worship-sheet`, 이미 폐기 대상이던 `ocr-service` 포함) 삭제 및 결제 정리는 세션이 Fly 계정 접근 권한이 없어 사용자가 직접 진행 필요.
 
-### OCI 백엔드 이관
-- Fly.io 비용 절감을 위해 백엔드를 OCI VM으로 이관 중(DB는 Supabase 그대로 유지, R2 스토리지도 그대로 유지).
+### OCI 백엔드 운영
+- 백엔드는 OCI VM에서 Docker Compose로 상시 구동(DB는 Supabase, R2 스토리지도 그대로 사용).
 - 이 세션(원격 격리 컨테이너)은 네트워크 정책상 SSH(raw TCP)를 못 나가서 서버에 직접 접속할 수 없음 — 배포는 전부 GitHub Actions(`OCI Deploy` 워크플로우, `.github/workflows/oci-deploy.yml`)가 SSH로 대신 수행하고, 최초 1회 서버 설정만 사람이 직접 함.
 - **배포 방식**: `docker-compose.oci.yml`(백엔드 컨테이너 + `cloudflared` Quick Tunnel)을 `main` push마다 GitHub Actions가 SSH로 접속해 `git reset --hard origin/main` 후 `docker compose up -d --build`.
 - **HTTPS 노출**: 도메인이 없어서 Cloudflare **Quick Tunnel**(`cloudflared tunnel --url ...`, 토큰/로그인 불필요) 사용을 사용자가 선택함. ⚠️ **Quick Tunnel 주소(`https://xxxx.trycloudflare.com`)는 배포(컨테이너 재시작)마다 바뀜** — 자동배포와는 궁합이 나쁘다는 점을 사용자에게 명시적으로 안내했고, 그래도 도메인 없이 진행하기로 확정함. 배포 후 Vercel의 `VITE_API_BASE_URL`을 새 주소로 **수동 갱신**해야 함(OCI Deploy 워크플로우 로그 마지막 줄에 새 주소가 출력됨).
@@ -135,8 +135,7 @@ setlists (셋리스트/콘티)
 - **Tailwind v4**: `@custom-variant dark (&:where(.dark, .dark *))` + `@theme inline`
 - **반응형**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
 - **곡 상세**: 악보 이미지 슬라이드 캐러셀 (sheets × files 플랫화), 키보드 ←/→ 네비게이션
-- **로컬 개발 백엔드 전환**: `npm run dev`(기본) → `.env.local`의 `VITE_API_BASE_URL=https://worship-sheet.fly.dev`(Fly 프로덕션 백엔드 대상, 기존 방식 유지). 로컬에서 직접 띄운 백엔드(JDK17 `./gradlew bootRun`, 기본 포트 8080)를 쓰려면 `npm run dev:local`(Vite `--mode localdev` → `frontend/.env.localdev`가 `http://localhost:8080`으로 오버라이드). 두 모드 모두 동시에 안 켜도 되고, 커맨드만 바꿔서 그때그때 전환.
-- **로컬 개발**: `frontend/.env.local` → `VITE_API_BASE_URL=https://worship-sheet.fly.dev`
+- **로컬 개발 백엔드 전환**: 기본은 `npm run dev:local`(Vite `--mode localdev` → `frontend/.env.localdev`가 `http://localhost:8080`으로 설정, 로컬에서 JDK17로 직접 띄운 백엔드 사용: `JAVA_HOME=<jdk17 경로> ./gradlew bootRun`). 배포된 OCI 백엔드를 가리키고 싶으면 `frontend/.env.local`에 `VITE_API_BASE_URL`을 그 시점의 Cloudflare Quick Tunnel 주소로 직접 설정한 뒤 `npm run dev`(주소가 배포/재시작마다 바뀌므로 매번 최신값 확인 필요 — "OCI 백엔드 운영" 참고).
 
 ## 로컬 백엔드 실행
 - **기본**: `JAVA_HOME=<jdk17 경로> ./gradlew bootRun` → 저장소 루트에 `.env`가 없으면 `application.yml` 기본값(로컬 Postgres, `localhost:5432/sheet_music`) 사용.
