@@ -5,7 +5,6 @@
 | 서비스 | 주소 |
 |--------|------|
 | 웹앱 | https://worship-sheet.vercel.app |
-| 백엔드 API | https://worship-sheet.fly.dev |
 
 > 데이터는 팀 전체가 함께 보는 공용 데이터입니다. 로그인은 접근 제한 용도이며 사용자별로 자료가 분리되지 않습니다.
 
@@ -119,7 +118,7 @@
 | 프론트엔드 | Vue 3, TypeScript, Pinia, Vue Router, Tailwind CSS v4 |
 | DB | PostgreSQL (Supabase), Flyway 마이그레이션 |
 | 스토리지 | Cloudflare R2 (`STORAGE_TYPE`으로 local 전환 가능) |
-| 인프라 | Fly.io(백엔드), Vercel(프론트엔드), GitHub Actions 자동배포 |
+| 인프라 | OCI VM + Docker Compose(백엔드), Vercel(프론트엔드), GitHub Actions 자동배포 |
 
 `main` 브랜치에 push하면 GitHub Actions로 백엔드·프론트엔드가 자동 배포됩니다.
 

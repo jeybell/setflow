@@ -13,8 +13,8 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:sheet_pass}
     driver-class-name: org.postgresql.Driver
     hikari:
-      # Fly.io 는 유휴 시 머신을 완전히 정지하지 않고 메모리 스냅샷으로 정지(suspend)한다.
-      # 정지된 동안 Supabase 쪽에서 유휴 커넥션을 이미 끊어버릴 수 있는데, 재개 시
+      # 백엔드가 오래 유휴 상태였다가 재개되면(서스펜드/재개, 컨테이너 재시작 등)
+      # 그동안 Supabase 쪽에서 유휴 커넥션을 이미 끊어버릴 수 있는데, 재개 시
       # HikariCP 풀은 그 죽은 커넥션을 여전히 idle 로 들고 있어 다음 요청(대표적으로 로그인)이
       # "Connection is not available" 로 30초 넘게 대기하다 실패하는 문제가 있었다.
       # minimum-idle=0 으로 유휴 커넥션을 붙들고 있지 않게 하고, idle-timeout/max-lifetime 을
