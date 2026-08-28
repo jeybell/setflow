@@ -715,15 +715,27 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             <template v-if="!isEditing">
               <div class="flex items-start justify-between gap-2">
                 <h1 class="text-lg font-bold text-foreground leading-snug break-words">{{ song.title }}</h1>
-                <button
-                  type="button"
-                  aria-label="곡 정보 수정"
-                  title="곡 정보 수정"
-                  class="shrink-0 -mr-1 -mt-1 p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  @click="startEdit"
-                >
-                  <Pencil class="w-4 h-4" />
-                </button>
+                <div class="flex items-center gap-1 shrink-0 -mr-1 -mt-1">
+                  <button
+                    type="button"
+                    aria-label="곡 정보 수정"
+                    title="곡 정보 수정"
+                    class="p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    @click="startEdit"
+                  >
+                    <Pencil class="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="곡 삭제"
+                    title="곡 삭제"
+                    :disabled="isDeleting"
+                    class="p-1.5 rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive transition-colors disabled:opacity-50"
+                    @click="handleDeleteSong"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <dl class="mt-3 space-y-1.5 text-sm">
                 <div v-if="song.artist" class="flex gap-2">
@@ -1045,20 +1057,9 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
 
           <!-- ── 관리 패널 (접이식) ─────────────────────── -->
           <div v-if="showManage" class="mt-4 border-t border-border pt-4">
-            <!-- 곡 정보 수정 -->
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-base font-semibold text-foreground">곡 관리</h2>
-              <div v-if="!isEditing" class="flex gap-2 flex-wrap">
-                <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDeleteSong">
-                  <Trash2 class="w-3.5 h-3.5" />
-                  곡 삭제
-                </Button>
-              </div>
-            </div>
-
             <!-- 악보 버전 관리 -->
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-semibold text-foreground">악보 버전</h3>
+              <h3 class="text-sm font-semibold text-foreground">악보</h3>
               <Button variant="outline" size="sm" @click="showAddSheet = !showAddSheet">
                 <template v-if="showAddSheet"><X class="w-3.5 h-3.5" />취소</template>
                 <template v-else><Plus class="w-3.5 h-3.5" />버전 추가</template>
@@ -1078,7 +1079,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             </Card>
 
             <p v-if="sheets.length === 0" class="text-sm text-muted-foreground py-6 text-center">
-              등록된 악보 버전이 없습니다.
+              등록된 악보가 없습니다.
             </p>
 
             <div v-else class="flex flex-col gap-3">
