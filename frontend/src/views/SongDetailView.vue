@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical,
+  X, Eye, Download, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
@@ -108,8 +108,6 @@ const onKey = (e: KeyboardEvent) => {
   else if (e.key === 'ArrowRight') go(1)
 }
 
-// ── 관리 패널 토글
-const showManage = ref(false)
 // 모바일: 곡 정보 사이드바 접기/펼치기 (기본 접힘 → 악보가 우선 노출)
 const showMobileDetails = ref(false)
 
@@ -283,7 +281,7 @@ watch(sheets, (list) => {
   }
 }, { immediate: true })
 
-// 상단 슬라이드(하단 키 썸네일 포함)에서 다른 버전으로 넘기면, '악보 관리'의
+// 상단 슬라이드(하단 키 썸네일 포함)에서 다른 버전으로 넘기면, '악보' 목록의
 // 아코디언도 그 버전으로 맞춰 펼친다.
 watch(currentIndex, (i) => {
   const sheet = slides.value[i]?.sheet
@@ -655,7 +653,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             <div v-else class="flex flex-col items-center gap-3 py-20 text-center px-6">
               <Music class="w-10 h-10 text-muted-foreground" />
               <p class="text-sm font-medium text-foreground">등록된 악보가 없습니다</p>
-              <p class="text-sm text-muted-foreground">아래 ‘악보 관리’에서 버전과 파일을 추가하세요.</p>
+              <p class="text-sm text-muted-foreground">‘악보’ 섹션에서 버전과 파일을 추가하세요.</p>
             </div>
           </div>
 
@@ -683,7 +681,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
           @click="showMobileDetails = !showMobileDetails"
         >
           <ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showMobileDetails }" />
-          {{ showMobileDetails ? '곡 정보 접기' : '곡 정보 · 악보 관리' }}
+          {{ showMobileDetails ? '곡 정보 접기' : '곡 정보 · 악보' }}
         </button>
 
         <!-- ── 곡 정보 사이드 ─────────────────────────── -->
@@ -735,18 +733,9 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                   class="inline-flex items-center h-6 px-2 rounded-full bg-primary/15 text-primary text-xs font-medium"
                 >{{ tag }}</span>
               </div>
-
-              <button
-                type="button"
-                class="mt-4 w-full inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                @click="showManage = !showManage"
-              >
-                <Settings2 class="w-4 h-4" />
-                {{ showManage ? '관리 닫기' : '악보 관리' }}
-              </button>
             </template>
 
-            <!-- 편집 모드 (인라인, '악보 관리' 안 열어도 바로 수정) -->
+            <!-- 편집 모드 (인라인 수정) -->
             <template v-else>
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-foreground">곡 정보 수정</h3>
@@ -1037,9 +1026,8 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             </button>
           </Card>
 
-          <!-- ── 관리 패널 (접이식) ─────────────────────── -->
-          <div v-if="showManage" class="mt-4 border-t border-border pt-4">
-            <!-- 악보 버전 관리 -->
+          <!-- ── 악보 버전 목록 (항상 노출) ─────────────────────── -->
+          <div class="mt-4 border-t border-border pt-4">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-sm font-semibold text-foreground">악보</h3>
               <Button variant="outline" size="sm" @click="showAddSheet = !showAddSheet">
