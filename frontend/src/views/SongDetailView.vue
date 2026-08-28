@@ -292,6 +292,13 @@ watch(sheets, (list) => {
   }
 }, { immediate: true })
 
+// 상단 슬라이드(하단 키 썸네일 포함)에서 다른 버전으로 넘기면, '악보 관리'의
+// 아코디언도 그 버전으로 맞춰 펼친다.
+watch(currentIndex, (i) => {
+  const sheet = slides.value[i]?.sheet
+  if (sheet) expandedSheetId.value = sheet.songSheetId
+})
+
 // ── 악보 버전 드래그 순서 변경 (Pointer Events: 마우스/터치/펜 공통, 변경 즉시 자동 저장)
 const sheetDragIndex = ref<number | null>(null)
 const sheetDragOverIndex = ref<number | null>(null)
