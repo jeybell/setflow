@@ -5,6 +5,10 @@ export const AUTH_TOKEN_KEY = 'auth_token'
 export const AUTH_USERNAME_KEY = 'auth_username'
 export const AUTH_ROLE_KEY = 'auth_role'
 
+// 로그인 없이도 접근 가능한 경로. 이 경로에서 401을 받아도 로그인 화면으로 강제 이동시키지
+// 않는다(공유 링크 방문자가 인증이 필요한 부가 API 호출 때문에 튕겨나가는 것을 방지).
+export const PUBLIC_PATH_PREFIXES = ['/login', '/register', '/share/']
+
 const http = axios.create({
   headers: {
     'Content-Type': 'application/json',
@@ -24,11 +28,14 @@ http.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(AUTH_TOKEN_KEY)
-      localStorage.removeItem(AUTH_USERNAME_KEY)
-      localStorage.removeItem(AUTH_ROLE_KEY)
-      if (location.pathname !== '/login') {
-        location.href = '/login'
+      const isPublicPage = PUBLIC_PATH_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))
+      if (!isPublicPage) {
+        localStorage.removeItem(AUTH_TOKEN_KEY)
+        localStorage.removeItem(AUTH_USERNAME_KEY)
+        localStorage.removeItem(AUTH_ROLE_KEY)
+        if (location.pathname !== '/login') {
+          location.href = '/login'
+        }
       }
       return Promise.reject(error)
     }

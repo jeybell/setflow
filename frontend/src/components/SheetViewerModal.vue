@@ -22,6 +22,9 @@ const props = defineProps<{
   // true면 현재 페이지(악보 버전)를 바로 고를 수 있는 "이 버전 추가" 버튼을 보여준다
   // (콘티 곡 추가 시 여러 악보 버전을 넘겨보며 바로 선택하는 용도).
   selectable?: boolean
+  // true면 필기·배경 흰색 저장 등 인증이 필요한 편집 기능을 숨기고 첨부된 이미지만 보여준다
+  // (콘티 공유 링크의 비로그인 방문자용 — 인증 필요한 API 호출로 인한 401 방지).
+  readOnly?: boolean
 }>()
 
 const emit = defineEmits<{ close: []; select: [index: number] }>()
@@ -206,6 +209,7 @@ const redraw = (fileId: number) => {
 }
 
 const ensureAnnotationLoaded = async (fileId: number) => {
+  if (props.readOnly) return
   if (loadedFileIds.has(fileId)) return
   loadedFileIds.add(fileId)
   try {
@@ -419,7 +423,7 @@ onUnmounted(() => {
           이 버전 추가
         </button>
         <button
-          v-if="imageFiles.length > 0"
+          v-if="imageFiles.length > 0 && !readOnly"
           type="button"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors"
           :class="penMode ? 'bg-primary text-primary-foreground' : 'bg-zinc-700 hover:bg-zinc-600'"
@@ -544,7 +548,7 @@ onUnmounted(() => {
             />
             <!-- 배경 흰색으로 저장 -->
             <button
-              v-if="!penMode"
+              v-if="!penMode && !readOnly"
               type="button"
               :disabled="whiteBgSavingId === file.songFileId"
               class="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-black/60 hover:bg-black/80 disabled:opacity-60 text-white transition-colors"
