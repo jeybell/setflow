@@ -180,6 +180,8 @@ const handleDeleteSong = async () => {
 // ── 악보 버전 추가
 const showAddSheet = ref(false)
 const sheetForm = reactive({ sheetKey: '', versionName: '', memo: '' })
+const sheetFormFile = ref<File | undefined>(undefined)
+const sheetFormFileInputKey = ref(0)
 const sheetError = ref('')
 const isCreatingSheet = ref(false)
 
@@ -187,18 +189,28 @@ const resetSheetForm = () => {
   sheetForm.sheetKey = ''
   sheetForm.versionName = ''
   sheetForm.memo = ''
+  sheetFormFile.value = undefined
+  sheetFormFileInputKey.value += 1
   sheetError.value = ''
+}
+
+const onSheetFormFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  sheetFormFile.value = input.files?.[0]
 }
 
 const handleCreateSheet = async () => {
   sheetError.value = ''
   isCreatingSheet.value = true
   try {
-    await createSongSheet(props.songId, {
+    const created = await createSongSheet(props.songId, {
       sheetKey: toOpt(sheetForm.sheetKey),
       versionName: toOpt(sheetForm.versionName),
       memo: toOpt(sheetForm.memo),
     })
+    if (sheetFormFile.value) {
+      await uploadSongSheetFile(created.songSheetId, sheetFormFile.value)
+    }
     resetSheetForm()
     showAddSheet.value = false
     await songStore.fetchSong(props.songId)
@@ -1053,6 +1065,24 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 </Button>
               </div>
               <Textarea v-model="sheetForm.memo" rows="2" placeholder="메모 (선택)" class="text-xs" />
+              <div class="flex items-center gap-2 flex-wrap mt-3">
+                <label
+                  class="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-card text-xs text-foreground hover:bg-muted cursor-pointer transition-colors"
+                >
+                  <Upload class="w-3.5 h-3.5" />
+                  파일 선택 (선택)
+                  <input
+                    :key="sheetFormFileInputKey"
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    class="hidden"
+                    @change="onSheetFormFileChange"
+                  />
+                </label>
+                <span v-if="sheetFormFile" class="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {{ sheetFormFile.name }}
+                </span>
+              </div>
             </Card>
 
             <p v-if="sheets.length === 0" class="text-sm text-muted-foreground py-6 text-center">
@@ -1071,18 +1101,6 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 <div class="flex items-center gap-2 px-4 py-3">
                   <button
                     type="button"
-                    class="shrink-0 -ml-1 p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
-                    aria-label="순서 변경 손잡이"
-                    @pointerdown="onSheetHandleDown($event, idx)"
-                    @pointermove="onSheetHandleMove"
-                    @pointerup="onSheetHandleUp"
-                    @pointercancel="onSheetHandleCancel"
-                    @click.stop
-                  >
-                    <GripVertical class="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
                     class="flex-1 min-w-0 flex items-center gap-2 flex-wrap text-left"
                     @click="toggleSheet(sheet.songSheetId)"
                   >
@@ -1096,6 +1114,18 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                     :class="{ 'rotate-180': expandedSheetId === sheet.songSheetId }"
                     @click="toggleSheet(sheet.songSheetId)"
                   />
+                  <button
+                    type="button"
+                    class="shrink-0 -mr-1 p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+                    aria-label="순서 변경 손잡이"
+                    @pointerdown="onSheetHandleDown($event, idx)"
+                    @pointermove="onSheetHandleMove"
+                    @pointerup="onSheetHandleUp"
+                    @pointercancel="onSheetHandleCancel"
+                    @click.stop
+                  >
+                    <GripVertical class="w-4 h-4" />
+                  </button>
                 </div>
 
                 <!-- 펼친 내용 -->
