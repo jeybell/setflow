@@ -894,17 +894,6 @@ watch(() => props.setlistId, load)
                   },
                 ]"
               >
-                <button
-                  v-if="songViewMode === 'detail'"
-                  type="button"
-                  class="p-1 -m-1 text-muted-foreground hover:text-foreground shrink-0 mt-0.5 cursor-grab active:cursor-grabbing touch-none"
-                  @pointerdown="onHandlePointerDown($event, idx)"
-                  @pointermove="onHandlePointerMove"
-                  @pointerup="onHandlePointerUp"
-                  @pointercancel="onHandlePointerCancel"
-                >
-                  <GripVertical class="w-4 h-4" />
-                </button>
                 <div class="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                   <span class="text-xs font-bold text-muted-foreground">{{ idx + 1 }}</span>
                 </div>
@@ -1082,6 +1071,18 @@ watch(() => props.setlistId, load)
                   </template>
                   </template>
                 </div>
+                <button
+                  v-if="songViewMode === 'detail'"
+                  type="button"
+                  class="p-1 text-muted-foreground hover:text-foreground shrink-0 mt-0.5 cursor-grab active:cursor-grabbing touch-none"
+                  aria-label="순서 변경 손잡이"
+                  @pointerdown="onHandlePointerDown($event, idx)"
+                  @pointermove="onHandlePointerMove"
+                  @pointerup="onHandlePointerUp"
+                  @pointercancel="onHandlePointerCancel"
+                >
+                  <GripVertical class="w-4 h-4" />
+                </button>
                 <button
                   v-if="songViewMode === 'detail'"
                   type="button"
