@@ -12,7 +12,7 @@ import ShareView from "../views/ShareView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import AdminView from "../views/AdminView.vue";
-import { AUTH_TOKEN_KEY, AUTH_ROLE_KEY } from "../apis/http";
+import { AUTH_TOKEN_KEY, AUTH_ROLE_KEY, PUBLIC_PATH_PREFIXES } from "../apis/http";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -90,8 +90,6 @@ const router = createRouter({
     },
   ],
 });
-
-const PUBLIC_PATH_PREFIXES = ["/login", "/register", "/share/"];
 
 router.beforeEach((to) => {
   const isPublic = PUBLIC_PATH_PREFIXES.some((prefix) => to.path.startsWith(prefix));

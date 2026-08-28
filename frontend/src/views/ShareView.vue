@@ -168,6 +168,7 @@ onMounted(async () => {
       :songs="viewerSongs"
       :setlist-title="setlist?.title ?? setlist?.serviceDate ?? null"
       :initial-index="viewerIndex"
+      read-only
       @close="showViewer = false"
     />
   </div>
