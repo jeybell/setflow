@@ -269,7 +269,14 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
 // ── 악보 버전 아코디언: 한 번에 한 버전만 펼침 (누르면 나머지는 접힘)
 const expandedSheetId = ref<number | null>(null)
 const toggleSheet = (id: number) => {
-  expandedSheetId.value = expandedSheetId.value === id ? null : id
+  const wasExpanded = expandedSheetId.value === id
+  expandedSheetId.value = wasExpanded ? null : id
+  // 반대 방향 동기화: 아코디언에서 다른 버전을 펼치면 상단 슬라이드(하단 키 썸네일)도
+  // 그 버전의 첫 페이지로 이동한다.
+  if (!wasExpanded) {
+    const index = slides.value.findIndex((slide) => slide.sheet.songSheetId === id)
+    if (index !== -1) currentIndex.value = index
+  }
 }
 watch(sheets, (list) => {
   const ids = list.map((s) => s.songSheetId)
