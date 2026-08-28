@@ -13,6 +13,7 @@ import DefaultLayout from '../layouts/DefaultLayout.vue'
 import SheetViewerModal from '../components/SheetViewerModal.vue'
 import SongPickerModal from '../components/SongPickerModal.vue'
 import type { ViewerSong } from '../components/SheetViewerModal.vue'
+import type { SongSheetSummary } from '../types/song'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Textarea from '../components/ui/Textarea.vue'
@@ -284,6 +285,56 @@ const saveKey = async (item: (typeof items.value)[number]) => {
     alert(apiError(e, '연주 키 저장에 실패했습니다.'))
   } finally {
     isSavingKey.value = false
+  }
+}
+
+// ── 악보 버전 변경 (#180 후속: 콘티 항목별로 곡의 다른 악보 버전으로 바꿀 수 있게)
+const sheetPickerItemId = ref<number | null>(null)
+const sheetPickerOptions = ref<SongSheetSummary[]>([])
+const isLoadingSheetOptions = ref(false)
+const isSavingSheetVersion = ref(false)
+
+const closeSheetPicker = () => {
+  sheetPickerItemId.value = null
+}
+
+const toggleSheetPicker = async (item: (typeof items.value)[number]) => {
+  if (sheetPickerItemId.value === item.setlistItemId) {
+    closeSheetPicker()
+    return
+  }
+  sheetPickerItemId.value = item.setlistItemId
+  isLoadingSheetOptions.value = true
+  sheetPickerOptions.value = []
+  try {
+    const song = await getSong(item.songId)
+    sheetPickerOptions.value = song.sheets ?? song.songSheets ?? []
+  } catch (e) {
+    alert(apiError(e, '악보 버전을 불러오지 못했습니다.'))
+    sheetPickerItemId.value = null
+  } finally {
+    isLoadingSheetOptions.value = false
+  }
+}
+
+const chooseSheetVersion = async (item: (typeof items.value)[number], songSheetId: number | null) => {
+  if (isSavingSheetVersion.value) return
+  isSavingSheetVersion.value = true
+  try {
+    await updateSetlistItem(item.setlistItemId, {
+      songSheetId,
+      orderNo: item.orderNo,
+      memo: item.memo,
+      performanceKey: item.performanceKey,
+      youtubeUrl: item.youtubeUrl,
+    })
+    closeSheetPicker()
+    await store.fetchSetlist(props.setlistId)
+    toast.success('악보 버전을 변경했어요')
+  } catch (e) {
+    alert(apiError(e, '악보 버전 변경에 실패했습니다.'))
+  } finally {
+    isSavingSheetVersion.value = false
   }
 }
 
@@ -870,12 +921,48 @@ watch(() => props.setlistId, load)
                   <!-- 상세 모드에서만: 키/버전·연주키·YouTube·메모 (#152) -->
                   <template v-if="songViewMode === 'detail'">
                   <div class="flex items-center gap-1 flex-wrap mb-1">
-                    <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
-                      {{ sheetLabel(item.sheetKey, item.versionName) }}
-                    </Badge>
-                    <Badge v-else-if="item.songSheetId" variant="destructive" class="text-xs">
-                      악보 버전 삭제됨
-                    </Badge>
+                    <!-- 악보 버전 배지 + 변경 드롭다운 -->
+                    <div class="relative inline-block">
+                      <button type="button" class="inline-flex items-center" @click.stop="toggleSheetPicker(item)">
+                        <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
+                          {{ sheetLabel(item.sheetKey, item.versionName) }}
+                        </Badge>
+                        <Badge v-else-if="item.songSheetId" variant="destructive" class="text-xs">
+                          악보 버전 삭제됨
+                        </Badge>
+                        <span v-else class="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                          <Music class="w-3 h-3" />버전 선택
+                        </span>
+                      </button>
+
+                      <template v-if="sheetPickerItemId === item.setlistItemId">
+                        <div class="fixed inset-0 z-40" @click.stop="closeSheetPicker" />
+                        <div class="absolute left-0 top-full mt-1 z-50 w-56 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-lg p-1.5 flex flex-col gap-0.5">
+                          <p v-if="isLoadingSheetOptions" class="text-xs text-muted-foreground px-2 py-1.5">불러오는 중...</p>
+                          <template v-else>
+                            <button
+                              type="button"
+                              class="text-left text-xs px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                              :class="!item.songSheetId ? 'text-primary font-medium' : 'text-foreground'"
+                              :disabled="isSavingSheetVersion"
+                              @click.stop="chooseSheetVersion(item, null)"
+                            >버전 없음</button>
+                            <button
+                              v-for="opt in sheetPickerOptions"
+                              :key="opt.songSheetId"
+                              type="button"
+                              class="text-left text-xs px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                              :class="item.songSheetId === opt.songSheetId ? 'text-primary font-medium' : 'text-foreground'"
+                              :disabled="isSavingSheetVersion"
+                              @click.stop="chooseSheetVersion(item, opt.songSheetId)"
+                            >{{ sheetLabel(opt.sheetKey, opt.versionName) ?? '버전명 없음' }}</button>
+                            <p v-if="sheetPickerOptions.length === 0" class="text-xs text-muted-foreground px-2 py-1.5">
+                              등록된 악보 버전이 없습니다.
+                            </p>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
 
                     <!-- 연주 키(이번 예배 키) 배지 + 인라인 수정 -->
                     <template v-if="editingKeyItemId === item.setlistItemId">
