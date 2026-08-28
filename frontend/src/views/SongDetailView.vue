@@ -928,7 +928,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 <AlignLeft class="w-4 h-4" />
                 가사
                 <span v-if="song?.lyrics" class="text-xs font-normal text-muted-foreground ml-1">
-                  ({{ song.lyrics.length }}자)
+                  ({{ song?.lyrics?.length }}자)
                 </span>
               </span>
               <ChevronDown
@@ -982,7 +982,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                     >{{ size === 'sm' ? 'S' : size === 'base' ? 'M' : 'L' }}</button>
                   </div>
                 </div>
-                <p :class="[lyricsFontSizeClass, 'whitespace-pre-line leading-relaxed text-foreground']">{{ song.lyrics }}</p>
+                <p :class="[lyricsFontSizeClass, 'whitespace-pre-line leading-relaxed text-foreground']">{{ song?.lyrics }}</p>
               </template>
 
               <!-- 가사 없음 -->
