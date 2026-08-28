@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical, PaintBucket,
+  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
@@ -102,15 +102,6 @@ const viewerSongs = computed<ViewerSong[]>(() =>
     }],
   })),
 )
-
-// 악보 관리 목록의 개별 파일에서 바로 배경 흰색 저장을 열 수 있도록, 해당 파일의
-// 슬라이드 인덱스를 찾아 뷰어를 그 위치로 연다.
-const openViewerAtFile = (fileId: number) => {
-  const index = slides.value.findIndex((slide) => slide.file.songFileId === fileId)
-  if (index === -1) return
-  currentIndex.value = index
-  showViewer.value = true
-}
 
 const onKey = (e: KeyboardEvent) => {
   if (e.key === 'ArrowLeft') go(-1)
@@ -344,31 +335,21 @@ const onSheetHandleCancel = () => {
 }
 
 // ── 파일 업로드
-const selectedFiles = ref<Record<number, File | undefined>>({})
 const uploadInputKeys = ref<Record<number, number>>({})
 const uploadMessages = ref<Record<number, string | undefined>>({})
 const uploadErrors = ref<Record<number, string | undefined>>({})
 const uploadingSheets = ref<Record<number, boolean>>({})
 
-const handleFileChange = (event: Event, sheetId: number) => {
+const handleFileChange = async (event: Event, sheetId: number) => {
   const input = event.target as HTMLInputElement
-  selectedFiles.value[sheetId] = input.files?.[0]
+  const file = input.files?.[0]
   uploadMessages.value[sheetId] = undefined
   uploadErrors.value[sheetId] = undefined
-}
+  if (!file) return
 
-const handleUpload = async (sheetId: number) => {
-  const file = selectedFiles.value[sheetId]
-  if (!file) {
-    uploadMessages.value[sheetId] = '파일을 선택해주세요.'
-    return
-  }
   uploadingSheets.value[sheetId] = true
-  uploadErrors.value[sheetId] = undefined
-  uploadMessages.value[sheetId] = undefined
   try {
     await uploadSongSheetFile(sheetId, file)
-    selectedFiles.value[sheetId] = undefined
     uploadInputKeys.value[sheetId] = (uploadInputKeys.value[sheetId] ?? 0) + 1
     uploadMessages.value[sheetId] = '업로드 완료'
     await songStore.fetchSong(props.songId)
@@ -702,7 +683,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
           @click="showMobileDetails = !showMobileDetails"
         >
           <ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showMobileDetails }" />
-          {{ showMobileDetails ? '곡 정보 접기' : '곡 정보 · 가사 · 악보 관리' }}
+          {{ showMobileDetails ? '곡 정보 접기' : '곡 정보 · 악보 관리' }}
         </button>
 
         <!-- ── 곡 정보 사이드 ─────────────────────────── -->
@@ -945,8 +926,9 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             </button>
           </Card>
 
-          <!-- 가사 섹션 (아코디언) -->
-          <Card class="mt-3 overflow-hidden">
+          <!-- 가사 섹션 (아코디언) — 사용 빈도가 낮아 UI만 숨김. 데이터/API는 유지하므로
+               필요해지면 이 v-if="false" 만 제거하면 다시 노출 가능 -->
+          <Card v-if="false" class="mt-3 overflow-hidden">
             <!-- 헤더 (항상 표시) -->
             <button
               type="button"
@@ -1156,15 +1138,26 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
 
                 <!-- 기본 뷰 -->
                 <template v-else>
-                  <div class="flex items-center justify-end gap-2 mb-3">
-                    <Button variant="outline" size="sm" @click="startEditSheet(sheet)">
+                  <div class="flex items-center justify-end gap-1 mb-3">
+                    <button
+                      type="button"
+                      aria-label="악보 버전 수정"
+                      title="악보 버전 수정"
+                      class="p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      @click="startEditSheet(sheet)"
+                    >
                       <Pencil class="w-3.5 h-3.5" />
-                      수정
-                    </Button>
-                    <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDeleteSheet(sheet)">
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="악보 버전 삭제"
+                      title="악보 버전 삭제"
+                      :disabled="isDeleting"
+                      class="p-1.5 rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive transition-colors disabled:opacity-50"
+                      @click="handleDeleteSheet(sheet)"
+                    >
                       <Trash2 class="w-3.5 h-3.5" />
-                      삭제
-                    </Button>
+                    </button>
                   </div>
                   <p v-if="sheet.memo" class="text-xs text-muted-foreground mb-3">{{ sheet.memo }}</p>
                 </template>
@@ -1183,16 +1176,6 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                       </span>
                     </div>
                     <div class="flex gap-1.5 shrink-0 ml-2">
-                      <button
-                        v-if="!isPdf(file)"
-                        type="button"
-                        class="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label="배경 흰색으로 저장"
-                        title="배경 흰색으로 저장"
-                        @click="openViewerAtFile(file.songFileId)"
-                      >
-                        <PaintBucket class="w-3.5 h-3.5" />
-                      </button>
                       <a
                         :href="fileUrl(file.songFileId, 'download')"
                         :download="file.originalFileName ?? 'sheet'"
@@ -1219,27 +1202,19 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 <div class="flex items-center gap-2 flex-wrap">
                   <label
                     class="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-card text-xs text-foreground hover:bg-muted cursor-pointer transition-colors"
+                    :class="{ 'opacity-50 pointer-events-none': uploadingSheets[sheet.songSheetId] }"
                   >
                     <Upload class="w-3.5 h-3.5" />
-                    파일 선택
+                    {{ uploadingSheets[sheet.songSheetId] ? '업로드 중...' : '파일 선택' }}
                     <input
                       :key="`${sheet.songSheetId}-${uploadInputKeys[sheet.songSheetId] ?? 0}`"
                       type="file"
                       accept=".pdf,.png,.jpg,.jpeg"
                       class="hidden"
+                      :disabled="uploadingSheets[sheet.songSheetId]"
                       @change="handleFileChange($event, sheet.songSheetId)"
                     />
                   </label>
-                  <span v-if="selectedFiles[sheet.songSheetId]" class="text-xs text-muted-foreground truncate max-w-[160px]">
-                    {{ selectedFiles[sheet.songSheetId]?.name }}
-                  </span>
-                  <Button
-                    size="sm"
-                    :disabled="uploadingSheets[sheet.songSheetId] || !selectedFiles[sheet.songSheetId]"
-                    @click="handleUpload(sheet.songSheetId)"
-                  >
-                    {{ uploadingSheets[sheet.songSheetId] ? '업로드 중...' : '업로드' }}
-                  </Button>
                   <span v-if="uploadMessages[sheet.songSheetId]" class="text-xs text-green-500">
                     {{ uploadMessages[sheet.songSheetId] }}
                   </span>
