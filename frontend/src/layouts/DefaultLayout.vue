@@ -44,8 +44,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
       </div>
 
       <div class="max-w-5xl mx-auto px-2 sm:px-6 h-12 sm:h-14 flex items-center gap-1.5 sm:gap-8">
-        <RouterLink to="/" class="text-sm sm:text-base font-bold text-primary tracking-tight shrink-0">
-          Worship Sheet
+        <RouterLink to="/" class="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base font-bold text-primary tracking-tight shrink-0">
+          <img src="/logo.png" alt="Setnote" class="w-6 h-6 sm:w-7 sm:h-7 rounded-md" />
+          Setnote
         </RouterLink>
         <nav class="flex gap-0.5 sm:gap-1 flex-1">
           <RouterLink
