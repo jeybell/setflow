@@ -169,6 +169,7 @@ onBeforeUnmount(() => {
 
 <template>
   <DefaultLayout>
+    <div class="sticky top-12 sm:top-14 z-30 bg-background -mx-3 sm:-mx-6 px-3 sm:px-6 pt-4 sm:pt-8 -mt-4 sm:-mt-8 pb-3">
     <div class="flex items-center justify-between mb-5">
       <h1 class="text-xl font-bold text-foreground">악보</h1>
       <div class="flex items-center gap-2">
@@ -293,6 +294,7 @@ onBeforeUnmount(() => {
           <option v-for="opt in SORT_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </Select>
       </div>
+    </div>
     </div>
 
     <p v-if="songStore.isLoadingList" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
