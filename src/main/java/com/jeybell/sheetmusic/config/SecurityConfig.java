@@ -47,6 +47,9 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("*"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Content-Disposition", "Content-Type", "Content-Length"));
+        // preflight(OPTIONS) 응답을 브라우저가 오래 캐시하도록 해, 화면을 옮겨다닐 때마다
+        // 매번 preflight 왕복이 반복되는 걸 줄인다(기본값 미설정 시 브라우저는 몇 초만 캐시함).
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
