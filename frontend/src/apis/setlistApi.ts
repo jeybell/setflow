@@ -47,3 +47,8 @@ export const duplicateSetlist = async (setlistId: number, serviceDate: string): 
   const { data } = await http.post<Setlist>(`/api/setlists/${setlistId}/duplicate`, { serviceDate })
   return data
 }
+
+export const createSetlistFromText = async (text: string): Promise<Setlist> => {
+  const { data } = await http.post<Setlist>('/api/setlists/from-text', { text })
+  return data
+}

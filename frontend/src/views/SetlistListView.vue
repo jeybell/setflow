@@ -2,13 +2,14 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { Plus, Trash2, ChevronRight, X, Music, List, CalendarDays, ChevronLeft, Star, Search} from '@lucide/vue'
-import { createSetlist, deleteSetlist } from '../apis/setlistApi'
+import { Plus, Trash2, ChevronRight, X, Music, List, CalendarDays, ChevronLeft, Star, Search, FileText} from '@lucide/vue'
+import { createSetlist, createSetlistFromText, deleteSetlist } from '../apis/setlistApi'
 import { addSetlistItem } from '../apis/setlistItemApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Label from '../components/ui/Label.vue'
+import Textarea from '../components/ui/Textarea.vue'
 import DatePicker from '../components/ui/DatePicker.vue'
 import Card from '../components/ui/Card.vue'
 import SongPickerModal from '../components/SongPickerModal.vue'
@@ -125,6 +126,39 @@ const handleCreate = async () => {
   }
 }
 
+// ── 텍스트로 콘티 만들기 (#230 후속): 곡 순서·키·메모를 담은 텍스트를 붙여넣으면
+// 백엔드가 파싱해 곡을 매칭하고 콘티를 한 번에 생성한다.
+const textImportHelp = `아래처럼 첫 줄에 <날짜.제목>을 쓰고, 그 아래 곡을 순서대로 한 줄씩 붙여넣으면 등록된 곡을 찾아 콘티를 만듭니다. 줄 끝의 코드(F, G, Am 등)는 연주 키로, 괄호 표시(예: (Intro))는 메모로 들어갑니다.
+
+<2026.9.2.(수)저녁 만나예배>
+・(Intro)목마른 예배자 F
+  +(후렴만)온 맘 다해 F`
+
+const showTextImport = ref(false)
+const textImportValue = ref('')
+const textImportError = ref('')
+const isImportingText = ref(false)
+
+const handleTextImport = async () => {
+  if (!textImportValue.value.trim()) {
+    textImportError.value = '텍스트를 입력해주세요.'
+    return
+  }
+  isImportingText.value = true
+  textImportError.value = ''
+  try {
+    const created = await createSetlistFromText(textImportValue.value)
+    showTextImport.value = false
+    textImportValue.value = ''
+    toast.success('콘티를 만들었어요')
+    await router.push(`/setlists/${created.setlistId}`)
+  } catch (e) {
+    textImportError.value = apiError(e, '콘티 생성에 실패했습니다.')
+  } finally {
+    isImportingText.value = false
+  }
+}
+
 const handleDelete = async (setlist: Setlist, event: Event) => {
   event.stopPropagation()
   const label = setlist.title ?? setlist.serviceDate
@@ -229,7 +263,23 @@ onMounted(() => { void store.fetchSetlists() })
             목록
           </button>
         </div>
-        <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">
+        <Button
+          variant="outline"
+          @click="() => { showTextImport = !showTextImport; showCreateForm = false }"
+        >
+          <template v-if="showTextImport">
+            <X class="w-4 h-4" />
+            취소
+          </template>
+          <template v-else>
+            <FileText class="w-4 h-4" />
+            텍스트로 만들기
+          </template>
+        </Button>
+        <Button
+          :variant="showCreateForm ? 'outline' : 'default'"
+          @click="() => { showCreateForm = !showCreateForm; showTextImport = false }"
+        >
           <template v-if="showCreateForm">
             <X class="w-4 h-4" />
             취소
@@ -241,6 +291,22 @@ onMounted(() => { void store.fetchSetlists() })
         </Button>
       </div>
     </div>
+
+    <!-- 텍스트로 콘티 만들기 -->
+    <Card v-if="showTextImport" class="p-5 mb-6 bg-muted/40">
+      <h2 class="text-sm font-semibold text-foreground mb-2">텍스트로 콘티 만들기</h2>
+      <p class="text-xs text-muted-foreground mb-3 whitespace-pre-line">{{ textImportHelp }}</p>
+      <p v-if="textImportError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-3 whitespace-pre-line">{{ textImportError }}</p>
+      <Textarea
+        v-model="textImportValue"
+        rows="10"
+        placeholder="여기에 콘티 텍스트를 붙여넣으세요"
+        class="font-mono text-xs mb-3"
+      />
+      <Button :disabled="isImportingText" @click="handleTextImport">
+        {{ isImportingText ? '만드는 중...' : '콘티 만들기' }}
+      </Button>
+    </Card>
 
     <!-- 생성 폼 -->
     <Card v-if="showCreateForm" class="p-5 mb-6 bg-muted/40">
@@ -296,7 +362,7 @@ onMounted(() => { void store.fetchSetlists() })
     </Card>
 
     <!-- 등록 폼이 열려있으면 하단 목록은 숨김 (특히 모바일 화면 정리) -->
-    <template v-if="!showCreateForm">
+    <template v-if="!showCreateForm && !showTextImport">
     <p v-if="store.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
     <p v-else-if="store.errorMessage" class="text-sm text-destructive py-4">{{ store.errorMessage }}</p>
 

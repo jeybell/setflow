@@ -53,7 +53,7 @@ setlists (셋리스트/콘티)
 
 ## 구현된 주요 기능
 - **곡/악보/파일**: songs·song_sheets·song_files CRUD, 곡 검색, soft delete
-- **셋리스트**: setlists·setlist_items CRUD, 콘티 화면, 드래그앤드롭 순서 변경, 셋리스트 PDF 다운로드(jsPDF)
+- **셋리스트**: setlists·setlist_items CRUD, 콘티 화면, 드래그앤드롭 순서 변경, 셋리스트 PDF 다운로드(jsPDF), 텍스트 붙여넣기로 콘티 자동 생성(`POST /api/setlists/from-text`, 곡 제목 매칭 all-or-nothing 검증, #230 후속)
 - **공유 링크**: UUID 토큰 기반 콘티 공유 (`/share/:token`), 공개 뷰
 - **통합 등록/업로드**: 곡+악보 1단계 통합 등록, 일괄 업로드 화면(`/songs/bulk`, 드래그앤드롭 + 카드별 편집)
 - **가사 관리**: songs.lyrics 컬럼, `PATCH /lyrics`, 곡 상세 가사 섹션(직접 편집)

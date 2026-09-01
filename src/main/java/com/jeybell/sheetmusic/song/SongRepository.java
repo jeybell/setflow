@@ -170,4 +170,17 @@ public interface SongRepository extends JpaRepository<Song, Long> {
               and (:excludeId is null or s.songId <> :excludeId)
             """)
     boolean existsByTitleIgnoreCase(@Param("title") String title, @Param("excludeId") Long excludeId);
+
+    /**
+     * 텍스트로 콘티 생성 시 곡 제목 매칭용. 정확히 일치하는 곡이 여러 개(중복 곡)일 수 있어
+     * List 로 반환 — 호출 측에서 0개(미발견)/2개 이상(모호함)을 구분해 처리한다.
+     */
+    @Query("""
+            select distinct s
+            from Song s
+            left join fetch s.sheets sheets
+            where s.deletedAt is null
+              and trim(lower(s.title)) = trim(lower(:title))
+            """)
+    List<Song> findActiveByTitleIgnoreCase(@Param("title") String title);
 }
