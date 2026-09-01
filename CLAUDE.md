@@ -130,7 +130,7 @@ setlists (셋리스트/콘티)
 - 진행 상황·결정사항이 바뀌면 CLAUDE.md를 즉시 업데이트하고 커밋·푸시할 것.
 
 ## 프론트엔드 주요 설계 (v24 이후)
-- **테마**: 다크 기본, CSS 변수 기반 토큰 시스템 (`--background`, `--foreground`, `--card` 등)
+- **테마**: 라이트 기본, CSS 변수 기반 토큰 시스템 (`--background`, `--foreground`, `--card` 등)
 - **FOUC 방지**: `index.html` 인라인 스크립트로 `dark` 클래스 선 적용
 - **Tailwind v4**: `@custom-variant dark (&:where(.dark, .dark *))` + `@theme inline`
 - **반응형**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`

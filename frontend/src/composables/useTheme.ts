@@ -7,7 +7,7 @@ const STORAGE_KEY = 'theme'
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem(STORAGE_KEY)
   if (saved === 'light' || saved === 'dark') return saved
-  return 'dark' // 기본값: 다크
+  return 'light' // 기본값: 라이트
 }
 
 const theme = ref<Theme>(getInitialTheme())
