@@ -3,6 +3,7 @@ package com.jeybell.sheetmusic.setlist;
 import com.jeybell.sheetmusic.setlist.dto.SetlistDuplicateRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistResponse;
+import com.jeybell.sheetmusic.setlist.dto.SetlistTextImportRequest;
 import com.jeybell.sheetmusic.setlist.dto.SharedSetlistResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -59,6 +60,14 @@ public class SetlistController {
     public ResponseEntity<Void> deleteSetlist(@PathVariable("setlistId") Long setlistId) {
         setlistService.deleteSetlist(setlistId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/from-text")
+    public ResponseEntity<SetlistResponse> createFromText(@Valid @RequestBody SetlistTextImportRequest request) {
+        SetlistResponse response = setlistService.createFromText(request.text());
+        return ResponseEntity
+                .created(Objects.requireNonNull(URI.create("/api/setlists/" + response.setlistId())))
+                .body(response);
     }
 
     @PostMapping("/{setlistId}/duplicate")
