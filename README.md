@@ -1,4 +1,4 @@
-# 악보 정리 앱 (sheet-music)
+# Setflow — 예배 악보·콘티 관리 앱
 
 예배·공연용 악보를 곡 단위로 관리하고, 셋리스트(콘티)를 구성·공유·진행하는 웹 애플리케이션.
 
@@ -106,6 +106,7 @@
 - **홈 대시보드** — 다음 예배 D-day, 최근/즐겨찾기 콘티, 자주 쓰는 곡 Top 5
 - **악보 필기** — 스타일러스 벡터 필기(비파괴 저장)
 - **곡 병합** — 중복 곡 정리(API)
+- **관리자 모드** — 역할 기반 권한(USER/ADMIN, 매 요청 시 즉시 반영). 사용자 관리, 콘텐츠 휴지통(삭제된 곡·콘티 복구), 기능 요청 관리, 스토리지 마이그레이션(local↔R2)
 - **UX** — 다크/라이트 테마, 반응형(모바일 최적화 레이아웃), 저장 성공 토스트, 전역 로딩 표시
 
 ---
@@ -121,6 +122,8 @@
 | 인프라 | OCI VM + Docker Compose(백엔드), Vercel(프론트엔드), GitHub Actions 자동배포 |
 
 `main` 브랜치에 push하면 GitHub Actions로 백엔드·프론트엔드가 자동 배포됩니다.
+
+> 전체 시스템 구성·데이터 모델·인증 흐름·설계 결정은 [아키텍처 정의서](docs/architecture.md)를 참고하세요.
 
 ---
 
@@ -275,7 +278,7 @@ npm run dev
 
 # 🔌 API 레퍼런스
 
-`/api/auth/**`, `GET /api/setlists/share/**`, `GET /api/song-files/*/view`·`/download`만 공개이며 그 외는 인증(Bearer 토큰) 필요.
+`/api/auth/**`, `GET /api/setlists/share/**`, `GET /api/song-files/*/view`·`/download`만 공개이며 그 외는 인증(Bearer 토큰) 필요. `/api/admin/**`는 ADMIN 권한 필요.
 
 ### Auth
 | Method | Path | 설명 |
@@ -303,6 +306,7 @@ npm run dev
 |--------|------|------|
 | `GET` | `/api/songs/{songId}/sheets` | 악보 버전 목록 |
 | `POST` | `/api/songs/{songId}/sheets` | 악보 버전 추가 |
+| `PATCH` | `/api/songs/{songId}/sheets/reorder` | 악보 버전 순서 변경 |
 | `GET` | `/api/song-sheets/{id}` | 악보 버전 단건 |
 | `PUT` | `/api/song-sheets/{id}` | 악보 버전 수정 |
 | `DELETE` | `/api/song-sheets/{id}` | 악보 버전 삭제(soft) |
@@ -336,9 +340,21 @@ npm run dev
 | `DELETE` | `/api/setlist-items/{itemId}` | 아이템 삭제 |
 | `PATCH` | `/api/setlists/{id}/items/reorder` | 아이템 순서 변경 |
 
-### 기타
+### 기능 요청
 | Method | Path | 설명 |
 |--------|------|------|
 | `GET/POST` | `/api/feature-requests` | 기능 요청 조회/등록 |
-| `PATCH` | `/api/feature-requests/{id}/status` | 기능 요청 상태 변경 |
-| `DELETE` | `/api/feature-requests/{id}` | 기능 요청 삭제 |
+
+### Admin (`/api/admin/**` — ADMIN 권한 필요)
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/api/admin/users` | 사용자 목록 |
+| `PATCH` | `/api/admin/users/{id}/role` | 권한 지정/해제(USER↔ADMIN) |
+| `DELETE` | `/api/admin/users/{id}` | 사용자 삭제 |
+| `GET` | `/api/admin/songs/deleted` | 삭제된 곡 목록(휴지통) |
+| `POST` | `/api/admin/songs/{id}/restore` | 곡 복구 |
+| `GET` | `/api/admin/setlists/deleted` | 삭제된 콘티 목록(휴지통) |
+| `POST` | `/api/admin/setlists/{id}/restore` | 콘티 복구 |
+| `PATCH` | `/api/admin/feature-requests/{id}/status` | 기능 요청 상태 변경 |
+| `DELETE` | `/api/admin/feature-requests/{id}` | 기능 요청 삭제 |
+| `POST` | `/api/admin/migrate-storage` | 스토리지 마이그레이션(local↔R2) |
