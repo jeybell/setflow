@@ -116,7 +116,7 @@ setlists (셋리스트/콘티)
   ```bash
   curl -fsSL https://get.docker.com | sudo sh
   sudo usermod -aG docker $USER && newgrp docker
-  git clone https://github.com/jeybell/sheet-music.git ~/sheet-music
+  git clone https://github.com/jeybell/setflow.git ~/sheet-music
   cd ~/sheet-music
   # .env.oci 에 Supabase(SPRING_DATASOURCE_*)·R2·JWT_SECRET·CORS_ALLOWED_ORIGINS 채워 넣기(.env.example 참고)
   docker compose --env-file .env.oci -f docker-compose.oci.yml up -d --build
