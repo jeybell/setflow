@@ -58,8 +58,8 @@ const handleGuestLogin = async () => {
   <div class="min-h-dvh bg-background text-foreground flex items-center justify-center px-4">
     <Card class="w-full max-w-sm p-6">
       <div class="flex flex-col items-center gap-1.5 mb-6">
-        <img src="/logo.png" alt="Setnote" class="w-10 h-10 rounded-lg" />
-        <h1 class="text-lg font-bold text-foreground">Setnote 로그인</h1>
+        <img src="/logo.png" alt="Setflow" class="w-10 h-10 rounded-lg" />
+        <h1 class="text-lg font-bold text-foreground">Setflow 로그인</h1>
       </div>
 
       <p v-if="errorMessage" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">
