@@ -82,7 +82,7 @@ class SetlistCreateFromTextTest {
     }
 
     @Test
-    void 일치하는_곡이_없으면_아무것도_생성하지_않고_예외() {
+    void 일치하는_곡이_없으면_제목만으로_곡을_새로_등록해_생성한다() {
         song("목마른 예배자");
         em.flush();
         em.clear();
@@ -92,10 +92,12 @@ class SetlistCreateFromTextTest {
                 ・존재하지 않는 곡 F
                 """;
 
-        assertThatThrownBy(() -> service.createFromText(text))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("존재하지 않는 곡")
-                .hasMessageContaining("찾을 수 없습니다");
+        SetlistResponse response = service.createFromText(text);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).songTitle()).isEqualTo("존재하지 않는 곡");
+        assertThat(response.items().get(0).performanceKey()).isEqualTo("F");
+        assertThat(response.items().get(0).songSheetId()).isNull();
     }
 
     @Test
@@ -113,6 +115,57 @@ class SetlistCreateFromTextTest {
         assertThatThrownBy(() -> service.createFromText(text))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("2개");
+    }
+
+    @Test
+    void 곡_제목의_공백_차이는_무시하고_매칭한다() {
+        song("목 마른 예배자");
+        em.flush();
+        em.clear();
+
+        String text = """
+                <2026.9.2.(수)저녁 만나예배>
+                ・목마른예배자 F
+                """;
+
+        SetlistResponse response = service.createFromText(text);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).songTitle()).isEqualTo("목 마른 예배자");
+    }
+
+    @Test
+    void 정확히_일치하는_곡이_없으면_제목을_포함하는_곡으로_완화해서_매칭한다() {
+        song("주님의 은혜");
+        em.flush();
+        em.clear();
+
+        String text = """
+                <2026.9.2.(수)저녁 만나예배>
+                ・은혜 G
+                """;
+
+        SetlistResponse response = service.createFromText(text);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).songTitle()).isEqualTo("주님의 은혜");
+    }
+
+    @Test
+    void 완화된_매칭도_여러_곡에_해당하면_예외() {
+        song("주님의 은혜");
+        song("한량없는 은혜");
+        em.flush();
+        em.clear();
+
+        String text = """
+                <2026.9.2.(수)저녁 만나예배>
+                ・은혜 G
+                """;
+
+        assertThatThrownBy(() -> service.createFromText(text))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("특정할 수 없습니다");
     }
 
     @Test
