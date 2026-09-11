@@ -173,8 +173,8 @@ public interface SongRepository extends JpaRepository<Song, Long> {
 
     /**
      * 텍스트로 콘티 생성 시 곡 제목 매칭용. 대소문자·공백(앞뒤 및 중간)을 모두 무시하고 비교한다.
-     * 정확히 일치하는 곡이 여러 개(중복 곡)일 수 있어 List 로 반환 — 호출 측에서 0개(미발견)/
-     * 2개 이상(모호함)을 구분해 처리한다.
+     * 정확히 일치하는 곡이 여러 개(중복 곡)일 수 있어 List 로 반환하며, 가장 먼저 등록된 곡이
+     * 앞에 오도록 songId 오름차순 정렬한다 — 호출 측에서 중복이면 첫 번째를 사용한다.
      */
     @Query("""
             select distinct s
@@ -182,13 +182,15 @@ public interface SongRepository extends JpaRepository<Song, Long> {
             left join fetch s.sheets sheets
             where s.deletedAt is null
               and replace(lower(s.title), ' ', '') = replace(lower(:title), ' ', '')
+            order by s.songId asc
             """)
     List<Song> findActiveByTitleIgnoreCase(@Param("title") String title);
 
     /**
      * 텍스트로 콘티 생성 시, 정확히 일치하는 곡이 없을 때 쓰는 완화된 매칭. 곡 제목(공백 제거,
      * 대소문자 무시)이 주어진 문자열을 포함하는지로 찾는다. {@code pattern} 은 호출 측에서
-     * {@code "%" + 정규화된 제목 + "%"} 형태로 전달한다.
+     * {@code "%" + 정규화된 제목 + "%"} 형태로 전달한다. 가장 먼저 등록된 곡이 앞에 오도록
+     * songId 오름차순 정렬한다 — 호출 측에서 중복이면 첫 번째를 사용한다.
      */
     @Query("""
             select distinct s
@@ -196,6 +198,7 @@ public interface SongRepository extends JpaRepository<Song, Long> {
             left join fetch s.sheets sheets
             where s.deletedAt is null
               and replace(lower(s.title), ' ', '') like :pattern
+            order by s.songId asc
             """)
     List<Song> findActiveByTitleContaining(@Param("pattern") String pattern);
 }
