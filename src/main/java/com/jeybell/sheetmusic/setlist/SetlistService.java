@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,9 +89,8 @@ public class SetlistService {
     /**
      * 텍스트(제목 줄 + 곡 목록)를 파싱해 콘티를 한 번에 생성한다. 각 줄의 곡 제목은 먼저 기존에
      * 등록된 곡과 정확히 일치(대소문자·공백 무시)하는지 찾고, 없으면 제목을 포함하는 곡으로
-     * 완화해서 찾는다. 그래도 없으면 해당 제목만으로 곡을 새로 등록해 이어서 진행한다(실패하지
-     * 않음). 다만 어느 단계에서든 일치하는 곡이 여러 개(모호함)면 전체를 생성하지 않고 문제된
-     * 항목을 모아 한 번에 알려준다.
+     * 완화해서 찾는다. 그래도 없으면 해당 제목만으로 곡을 새로 등록해 이어서 진행한다. 일치하는
+     * 곡이 여러 개(중복 제목 등)면 그중 가장 먼저 등록된 곡을 사용한다 — 실패하지 않는다.
      */
     @Transactional
     public SetlistResponse createFromText(String text) {
@@ -105,14 +103,10 @@ public class SetlistService {
                     "날짜를 인식하지 못했습니다. 첫 줄이 <2026.9.2.(수)저녁 만나예배> 같은 형식인지 확인해주세요.");
         }
 
-        List<String> errors = new ArrayList<>();
-        List<SetlistItem> pendingItems = new ArrayList<>();
+        Setlist setlist = new Setlist(parsed.serviceDate(), parsed.title(), null);
         int orderNo = 1;
         for (SetlistTextParser.ParsedItem parsedItem : parsed.items()) {
-            Song song = findOrCreateMatchingSong(parsedItem.rawTitle(), errors);
-            if (song == null) {
-                continue;
-            }
+            Song song = findOrCreateMatchingSong(parsedItem.rawTitle());
 
             SongSheet matchedSheet = parsedItem.performanceKey() == null ? null
                     : song.getSheets().stream()
@@ -121,44 +115,28 @@ public class SetlistService {
                             .findFirst()
                             .orElse(null);
 
-            pendingItems.add(new SetlistItem(
+            setlist.addItem(new SetlistItem(
                     song, matchedSheet, orderNo++, parsedItem.memo(), parsedItem.performanceKey(), null));
         }
 
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException("콘티를 만들지 못했습니다:\n" + String.join("\n", errors));
-        }
-
-        Setlist setlist = new Setlist(parsed.serviceDate(), parsed.title(), null);
-        pendingItems.forEach(setlist::addItem);
         return SetlistResponse.from(setlistRepository.save(setlist));
     }
 
     /**
-     * rawTitle 에 해당하는 곡을 정확일치 → 부분일치(포함) 순으로 찾고, 그래도 없으면 rawTitle만
-     * 으로 새 곡을 등록해 반환한다. 모호한 경우(일치하는 곡이 2개 이상)에만 errors 에 기록하고
-     * null 을 반환한다.
+     * rawTitle 에 해당하는 곡을 정확일치 → 부분일치(포함) 순으로 찾아 반환한다. 일치하는 곡이
+     * 여러 개면(동일 제목 중복 등록 등) 가장 먼저 등록된 곡(songId 오름차순 첫 번째)을 사용한다.
+     * 그래도 없으면 rawTitle 만으로 곡을 새로 등록해 반환한다 — 항상 곡을 반환하며 실패하지 않는다.
      */
-    private Song findOrCreateMatchingSong(String rawTitle, List<String> errors) {
+    private Song findOrCreateMatchingSong(String rawTitle) {
         List<Song> exactMatches = songRepository.findActiveByTitleIgnoreCase(rawTitle);
-        if (exactMatches.size() == 1) {
+        if (!exactMatches.isEmpty()) {
             return exactMatches.get(0);
-        }
-        if (exactMatches.size() > 1) {
-            errors.add("\"" + rawTitle + "\" - 동일한 제목의 곡이 " + exactMatches.size()
-                    + "개 있습니다. 곡을 합치거나 제목을 정리한 뒤 다시 시도해주세요.");
-            return null;
         }
 
         String normalized = rawTitle.strip().toLowerCase().replace(" ", "");
         List<Song> likeMatches = songRepository.findActiveByTitleContaining("%" + normalized + "%");
-        if (likeMatches.size() == 1) {
+        if (!likeMatches.isEmpty()) {
             return likeMatches.get(0);
-        }
-        if (likeMatches.size() > 1) {
-            String candidates = likeMatches.stream().map(Song::getTitle).collect(Collectors.joining(", "));
-            errors.add("\"" + rawTitle + "\" - 비슷한 제목의 곡이 여러 개 있어 특정할 수 없습니다: " + candidates);
-            return null;
         }
 
         return songRepository.save(new Song(rawTitle, null, null, null, null));

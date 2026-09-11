@@ -38,10 +38,11 @@ class SetlistCreateFromTextTest {
         return s;
     }
 
-    private void sheet(Song song, String key) {
+    private SongSheet sheet(Song song, String key) {
         SongSheet sh = new SongSheet(key, null, null);
         song.addSheet(sh);
         em.persist(sh);
+        return sh;
     }
 
     @Test
@@ -101,9 +102,11 @@ class SetlistCreateFromTextTest {
     }
 
     @Test
-    void 동일제목_곡이_중복이면_예외() {
-        song("은혜");
-        song("은혜");
+    void 동일제목_곡이_중복이면_가장_먼저_등록된_곡으로_매칭한다() {
+        Song first = song("은혜");
+        Long firstSheetId = sheet(first, "G").getSongSheetId();
+        Song second = song("은혜");
+        sheet(second, "G");
         em.flush();
         em.clear();
 
@@ -112,9 +115,11 @@ class SetlistCreateFromTextTest {
                 ・은혜 G
                 """;
 
-        assertThatThrownBy(() -> service.createFromText(text))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("2개");
+        SetlistResponse response = service.createFromText(text);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).songTitle()).isEqualTo("은혜");
+        assertThat(response.items().get(0).songSheetId()).isEqualTo(firstSheetId);
     }
 
     @Test
@@ -152,7 +157,7 @@ class SetlistCreateFromTextTest {
     }
 
     @Test
-    void 완화된_매칭도_여러_곡에_해당하면_예외() {
+    void 완화된_매칭도_여러_곡에_해당하면_가장_먼저_등록된_곡으로_매칭한다() {
         song("주님의 은혜");
         song("한량없는 은혜");
         em.flush();
@@ -163,9 +168,10 @@ class SetlistCreateFromTextTest {
                 ・은혜 G
                 """;
 
-        assertThatThrownBy(() -> service.createFromText(text))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("특정할 수 없습니다");
+        SetlistResponse response = service.createFromText(text);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).songTitle()).isEqualTo("주님의 은혜");
     }
 
     @Test
